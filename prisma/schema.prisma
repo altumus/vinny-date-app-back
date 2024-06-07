@@ -22,3 +22,43 @@ model TestPrismaTable {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model Users {
+  id Int @id @default(autoincrement())
+
+  name         String
+  email        String?
+  birthdate    DateTime
+  phone        String
+  password     String
+  avatar       String
+  location     String?
+  UserCard     UsersCard[]
+  UserMessages UserMessages[]
+}
+
+model UsersCard {
+  id          Int      @id @default(autoincrement())
+  user        Users    @relation(fields: [userId], references: [id])
+  userId      Int
+  description String?
+  town        String
+  goal        MeetGoal @relation(fields: [goalId], references: [id])
+  goalId      Int
+}
+
+model MeetGoal {
+  id        Int         @id @default(autoincrement())
+  title     String
+  UsersCard UsersCard[]
+}
+
+model UserMessages {
+  id             Int      @id @default(autoincrement())
+  message        String
+  sender         Users    @relation(fields: [senderId], references: [id])
+  senderId       Int
+  sendedAt       DateTime
+  deleted        Boolean  @default(false)
+  messageReplyId Int?
+}
