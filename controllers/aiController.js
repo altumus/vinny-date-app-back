@@ -9,6 +9,7 @@ const imageUidRegexp = /src="([a-f0-9-]+)"/;
 const pipeline = util.promisify(stream.pipeline);
 
 export const mainAiFunction = async (req, res) => {
+	console.log('ai function is triggered');
 	const accessedTypes = ['image', 'text'];
 
 	if (!accessedTypes.includes(req.body.generationType)) {
@@ -18,7 +19,10 @@ export const mainAiFunction = async (req, res) => {
 	const tokenData = await getBearerToken();
 
 	if (req.body.generationType === 'image') {
-		const imageGenerateResult = await generateImage(tokenData.access_token);
+		const imageGenerateResult = await generateImage(
+			tokenData.access_token,
+			req.body.content
+		);
 
 		const imageStream = await getImageStream(
 			imageGenerateResult,
@@ -31,12 +35,61 @@ export const mainAiFunction = async (req, res) => {
 		return;
 	}
 
-	const textGeneration = await generateText(tokenData.access_token);
+	const textGeneration = await generateText(
+		tokenData.access_token,
+		req.body.content
+	);
 
 	return res.status(200).json(textGeneration);
 };
 
-export async function generateText(accessToken) {
+export async function analyseTextForContent(accessToken, content) {
+	const httpsAgent = new https.Agent({
+		rejectUnauthorized: false,
+	});
+
+	const data = {
+		model: 'GigaChat',
+		messages: [
+			{
+				role: 'system',
+				content: `Ты ИИ - твоя задача анализировать
+				присылаемый тебе текст. Если ты видишь в тексте угрозу для жизни человека,
+				разжигание ненависти, брань или любой другой угожающий
+				людям фактор, ты должен прислать
+				{status: 'danger' }.
+				Иначе, твой ответ будет только {status: 'ok'}`,
+			},
+			{
+				role: 'user',
+				content: content,
+			},
+		],
+		function_call: 'auto',
+	};
+
+	const url = 'https://gigachat.devices.sberbank.ru/api/v1/chat/completions';
+
+	const headers = {
+		'Content-Type': 'application/json',
+		Accept: 'application/json',
+		Authorization: `Bearer ${accessToken}`,
+	};
+
+	console.log('text gen started');
+
+	const response = await axios({
+		method: 'post',
+		url: url,
+		data,
+		headers,
+		httpsAgent: httpsAgent,
+	});
+
+	return response.data.choices[0].message.content;
+}
+
+export async function generateText(accessToken, content) {
 	const httpsAgent = new https.Agent({
 		rejectUnauthorized: false,
 	});
@@ -51,8 +104,7 @@ export async function generateText(accessToken) {
 			},
 			{
 				role: 'user',
-				content:
-					'Напиши интересный короткий факт, буквально пару строк. Ответь только этим фактом, без приветствия',
+				content: content,
 			},
 		],
 		function_call: 'auto',
@@ -116,7 +168,7 @@ export async function getImageStream(imageUid, token) {
 	return streamingImage.data;
 }
 
-export async function generateImage(accessToken) {
+export async function generateImage(accessToken, content) {
 	const httpsAgent = new https.Agent({
 		rejectUnauthorized: false,
 	});
@@ -126,11 +178,12 @@ export async function generateImage(accessToken) {
 		messages: [
 			{
 				role: 'system',
-				content: 'Ты — Василий Кандинский',
+				content:
+					'Ты — Художник, который может рисовать в абсолютно разных стилях, для тебя нет невозможного',
 			},
 			{
 				role: 'user',
-				content: 'Нарисуй розового кота',
+				content: content,
 			},
 		],
 		function_call: 'auto',

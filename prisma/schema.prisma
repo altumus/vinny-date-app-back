@@ -14,69 +14,64 @@ datasource db {
 }
 
 model Posts {
-  id          Int           @id @default(autoincrement())
-  title       String
-  content     String
-  creator     Users         @relation(fields: [creatorId], references: [id])
-  creatorId   Int
-  likes       Int           @default(0)
-  dislikes    Int           @default(0)
-  createdAt   DateTime      @default(now())
-  tags        Tags[]
-  comments    Comments[]
-  PostComment PostComment[]
-  PostTag     PostTag[]
+  id            Int             @id @default(autoincrement())
+  title         String
+  content       String
+  cover         String?
+  creator       Users           @relation(fields: [creatorId], references: [id])
+  creatorId     Int
+  likes         Int             @default(0)
+  dislikes      Int             @default(0)
+  createdAt     DateTime        @default(now())
+  postViewes Int @default(0)
+  PostsComments PostsComments[]
+  PostsTags     PostsTags[]
+}
+
+model PostsComments {
+  id        Int      @id
+  post      Posts    @relation(fields: [postId], references: [id])
+  postId    Int
+  commentId Int
+  comment   Comments @relation(fields: [commentId], references: [id])
+}
+
+model PostsTags {
+  id     Int   @id
+  post   Posts @relation(fields: [postId], references: [id])
+  postId Int
+  tagId  Int
+  tags   Tags  @relation(fields: [tagId], references: [id])
 }
 
 model Users {
   id        Int        @id @default(autoincrement())
   name      String
-  email     String
+  email     String     @unique
   avatar    String?
   hash      String
   posts     Posts[]
+  tags      Tags[]
   comments  Comments[]
   createdAt DateTime   @default(now())
-  Tags      Tags[]
 }
 
 model Comments {
-  id          Int           @id @default(autoincrement())
-  content     String
-  dislikes    Int           @default(0)
-  likes       Int           @default(0)
-  creator     Users         @relation(fields: [creatorId], references: [id])
-  creatorId   Int
-  createdAt   DateTime      @default(now())
-  post        Posts?        @relation(fields: [postId], references: [id])
-  postId      Int
-  PostComment PostComment[]
-}
-
-model PostComment {
-  post      Posts    @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId    Int
-  comment   Comments @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  commentId Int
-
-  @@id([postId, commentId])
-}
-
-model PostTag {
-  post   Posts @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId Int
-  tag    Tags  @relation(fields: [tagId], references: [id], onDelete: Cascade)
-  tagId  Int
-
-  @@id([postId, tagId])
+  id            Int             @id @default(autoincrement())
+  content       String
+  dislikes      Int             @default(0)
+  likes         Int             @default(0)
+  creatorId     Int
+  creator       Users           @relation(fields: [creatorId], references: [id])
+  createdAt     DateTime        @default(now())
+  PostsComments PostsComments[]
 }
 
 model Tags {
-  id        Int       @id @default(autoincrement())
+  id        Int         @id @default(autoincrement())
   title     String
   color     String
-  creator   Users     @relation(fields: [creatorId], references: [id])
+  creator   Users       @relation(fields: [creatorId], references: [id])
   creatorId Int
-  posts     Posts[]
-  PostTag   PostTag[]
+  PostsTags PostsTags[]
 }

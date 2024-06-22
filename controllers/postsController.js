@@ -9,7 +9,7 @@ export const create = async (req, res) => {
 				content: req.body.content,
 				title: req.body.title,
 				creatorId: req.body.creatorId,
-				tagId: req.body.tagId,
+				cover: req.body.cover,
 			},
 			include: {
 				creator: {
@@ -23,6 +23,7 @@ export const create = async (req, res) => {
 
 		res.status(200).json(createdPost);
 	} catch (error) {
+		console.log('req.body is', req.body);
 		console.log('error while create post', error);
 	}
 };
@@ -34,9 +35,9 @@ export const getAllPosts = async (req, res) => {
 				createdAt: 'desc',
 			},
 			include: {
-				PostTag: {
-					select: {
-						tag: {
+				PostsTags: {
+					include: {
+						tags: {
 							select: {
 								id: true,
 								color: true,
@@ -45,12 +46,65 @@ export const getAllPosts = async (req, res) => {
 						},
 					},
 				},
+				creator: {
+					select: {
+						id: true,
+						avatar: true,
+						name: true,
+					},
+				},
 			},
 		});
 
 		res.status(200).json(allPosts);
 	} catch (error) {
 		console.log('error while get all posts');
+	}
+};
+
+export const getPostById = async (req, res) => {
+	try {
+		const postDetails = await prisma.posts.findFirst({
+			where: {
+				id: Number(req.query.postId),
+			},
+			include: {
+				PostsComments: {
+					include: {
+						comment: {
+							select: {
+								id: true,
+								content: true,
+								creator: true,
+								dislikes: true,
+								likes: true,
+								createdAt: true,
+							},
+						},
+					},
+				},
+				creator: {
+					select: {
+						name: true,
+						avatar: true,
+						id: true,
+					},
+				},
+			},
+		});
+
+		await prisma.posts.update({
+			where: {
+				id: postDetails.id,
+			},
+			data: {
+				postViewes: postDetails.postViewes + 1,
+			},
+		});
+
+		res.status(200).json(postDetails);
+	} catch (error) {
+		console.log('error whilte get post by id', error);
 	}
 };
 
@@ -111,13 +165,14 @@ export const update = async (req, res) => {
 	try {
 		const updatedPost = await prisma.posts.update({
 			where: {
-				id: req.body.id,
+				id: Number(req.body.id),
 			},
 			data: {
 				content: req.body.content,
 				dislikes: req.body.dislikes,
 				likes: req.body.likes,
 				title: req.body.title,
+				cover: req.body.cover,
 			},
 			include: {
 				creator: {
