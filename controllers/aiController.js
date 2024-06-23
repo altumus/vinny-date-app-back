@@ -9,7 +9,12 @@ const imageUidRegexp = /src="([a-f0-9-]+)"/;
 const pipeline = util.promisify(stream.pipeline);
 
 export const mainAiFunction = async (req, res) => {
-	console.log('ai function is triggered');
+	console.log(
+		'ai function is triggered genType',
+		req.body.generationType,
+		'content is',
+		req.body.content
+	);
 	const accessedTypes = ['image', 'text'];
 
 	if (!accessedTypes.includes(req.body.generationType)) {
@@ -30,15 +35,17 @@ export const mainAiFunction = async (req, res) => {
 		);
 
 		const imageBase64 = await streamToBase64(imageStream);
-		res.status(200).json(imageBase64);
 
-		return;
+		console.log('image returned');
+		return res.status(200).json(imageBase64);
 	}
 
 	const textGeneration = await generateText(
 		tokenData.access_token,
 		req.body.content
 	);
+
+	console.log('generated type', req.body.content);
 
 	return res.status(200).json(textGeneration);
 };
@@ -100,7 +107,7 @@ export async function generateText(accessToken, content) {
 			{
 				role: 'system',
 				content:
-					'Ты — ИИ, твоя задача помогать людям дополнять их статьи и генерировать их изображения в указанном стиле',
+					'Ты — ИИ, твоя задача помогать людям дополнять их статьи, отвечай только текстом, изображения не используй',
 			},
 			{
 				role: 'user',
@@ -197,15 +204,19 @@ export async function generateImage(accessToken, content) {
 		Authorization: `Bearer ${accessToken}`,
 	};
 
-	const imageUid = await axios({
-		method: 'post',
-		url: url,
-		data,
-		headers,
-		httpsAgent: httpsAgent,
-	});
+	try {
+		const imageUid = await axios({
+			method: 'post',
+			url: url,
+			data,
+			headers,
+			httpsAgent: httpsAgent,
+		});
 
-	return imageUid.data.choices[0].message.content.match(imageUidRegexp)[1];
+		return imageUid.data.choices[0].message.content.match(imageUidRegexp)[1];
+	} catch (error) {
+		console.log('error in image');
+	}
 }
 
 export async function getBearerToken() {
@@ -234,7 +245,7 @@ export async function getBearerToken() {
 		data: data,
 		httpsAgent: httpsAgent,
 	}).catch((error) => {
-		console.log('error in request', error.response.data);
+		console.log('error in bearer');
 	});
 
 	return response.data;
